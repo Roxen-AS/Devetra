@@ -60,7 +60,7 @@ function App() {
           className="font-mono text-4xl md:text-5xl text-center pb-8 drop-shadow-lg select-none"
           style={neonShadow}
         >
-          Code Oracle
+          Devetra
         </h1>
         <p className="text-center mb-10 text-slate-300/80 text-lg">
           Enter your dev query. AI answers appear in the dark first.<br />
