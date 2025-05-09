@@ -1,3 +1,3 @@
 # Devetra
 
-A Custom Search Engine
+An AI based Custom Search Engine
