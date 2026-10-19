@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd dev-search && npm install && npm run build",
+  "outputDirectory": "dev-search/dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
