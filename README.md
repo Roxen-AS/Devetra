@@ -2,11 +2,18 @@
 
 > **An AI-Powered Custom Developer Search Engine & Technical Oracle**
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-dev--search--drab.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://dev-search-drab.vercel.app)
+
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel&logoColor=white)](https://dev-search-drab.vercel.app)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-emerald)](LICENSE)
+
+🌐 **Live Application:** [**https://dev-search-drab.vercel.app**](https://dev-search-drab.vercel.app)
+
+---
 
 Devetra synthesizes developer knowledge across the open web in real-time. Instead of jumping between tabs, Devetra queries top technical platforms in parallel and generates AI-driven technical solutions with copy-ready code snippets.
 
@@ -40,6 +47,7 @@ Devetra synthesizes developer knowledge across the open web in real-time. Instea
 
 * **Frontend:** React 18, TypeScript, Tailwind CSS
 * **Build Tool:** Vite
+* **Deployment:** Vercel (Continuous Deployment via GitHub)
 * **Icons:** Lucide React
 * **APIs:** GitHub REST API, Hacker News Algolia API, Dev.to API, Stack Exchange API, Google Gemini API
 
@@ -80,6 +88,12 @@ Devetra synthesizes developer knowledge across the open web in real-time. Instea
    ```bash
    npm run build
    ```
+
+---
+
+## 🔗 Deployment
+
+Live on Vercel: [**https://dev-search-drab.vercel.app**](https://dev-search-drab.vercel.app)
 
 ---
 
