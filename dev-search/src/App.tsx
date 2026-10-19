@@ -1,157 +1,235 @@
-import type React from "react";
-import { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import type { SearchResult, SearchSource, AiAnswer } from './types/search';
+import { searchAllSources } from './services/searchService';
+import { generateDevAnswer } from './services/aiService';
+import { Navbar } from './components/Navbar';
+import { SearchBar } from './components/SearchBar';
+import { FilterBar } from './components/FilterBar';
+import { AiAnswerCard } from './components/AiAnswerCard';
+import { ResultCard } from './components/ResultCard';
+import { RecentSearches } from './components/RecentSearches';
+import { SkeletonLoader } from './components/SkeletonLoader';
+import { ProModal } from './components/ProModal';
+import { Terminal, AlertCircle } from 'lucide-react';
 
-const mysteriousBackground = {
-  background:
-    "radial-gradient(ellipse at 80% 20%, #2e026d44 0%, #16161a 60%, #0f172a 100%)",
-};
+const STORAGE_KEY = 'devetra_recent_searches';
 
-const neonShadow = {
-  textShadow: "0 0 8px #4ff9f3, 0 0 4px #e521fa",
-};
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [aiAnswer, setAiAnswer] = useState<AiAnswer | null>(null);
+  const [activeSource, setActiveSource] = useState<SearchSource>('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isProOpen, setIsProOpen] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
-const AI_RESULT = {
-  title: "AI Answer",
-  body:
-    "Welcome, Code Explorer. Enter your query to unlock hidden developer knowledge. Our AI Oracle will answer first, followed by the web's secrets.",
-};
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setRecentSearches(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
 
-const FEATURED_RESULTS = [
-  {
-    title: "Stack Overflow",
-    url: "https://stackoverflow.com/",
-    excerpt:
-      "Top answers from the largest programming Q&A site. Your query, expertly answered.",
-    badge: "SO",
-    gradient:
-      "from-pink-500 via-fuchsia-500/80 to-violet-700 text-white border-fuchsia-700",
-  },
-  {
-    title: "GitHub Discussions",
-    url: "https://github.com/discussions",
-    excerpt:
-      "Insights from developer discussions. Explore current thinking and community wisdom.",
-    badge: "GH",
-    gradient: "from-emerald-500/90 via-cyan-600 to-blue-700 border-blue-700 text-white",
-  },
-  {
-    title: "Dev.to Features",
-    url: "https://dev.to/",
-    excerpt: "Best dev articles for your query, handpicked by community curators.",
-    badge: "DEV",
-    gradient: "from-indigo-500 via-sky-700 to-black border-indigo-800",
-  },
-];
+  const saveRecentSearch = (text: string) => {
+    try {
+      const filtered = [text, ...recentSearches.filter((s) => s.toLowerCase() !== text.toLowerCase())].slice(0, 5);
+      setRecentSearches(filtered);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    } catch {
+      // Ignore
+    }
+  };
 
-function App() {
-  const [query, setQuery] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const handleClearSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-  }
+  const executeSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+
+    setIsLoading(true);
+    setHasSearched(true);
+    setSubmittedQuery(searchQuery);
+    saveRecentSearch(searchQuery);
+
+    try {
+      // Execute live search and AI synthesis concurrently
+      const [searchResults, answer] = await Promise.all([
+        searchAllSources(searchQuery),
+        generateDevAnswer(searchQuery),
+      ]);
+
+      setResults(searchResults);
+      setAiAnswer(answer);
+    } catch (err) {
+      console.error('Search error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter results according to active source tab
+  const filteredResults = results.filter((res) => {
+    if (activeSource === 'all') return true;
+    return res.source === activeSource;
+  });
+
+  // Calculate counts per source
+  const counts: Record<SearchSource, number> = {
+    all: results.length,
+    stackoverflow: results.filter((r) => r.source === 'stackoverflow').length,
+    github: results.filter((r) => r.source === 'github').length,
+    devto: results.filter((r) => r.source === 'devto').length,
+    hackernews: results.filter((r) => r.source === 'hackernews').length,
+  };
 
   return (
-    <div className="min-h-screen w-full " style={mysteriousBackground}>
-      <div className="max-w-2xl mx-auto pt-20 px-4">
-        {/* Lucrative mysterious header */}
-        <h1
-          className="font-mono text-4xl md:text-5xl text-center pb-8 drop-shadow-lg select-none"
-          style={neonShadow}
-        >
-          Devetra
-        </h1>
-        <p className="text-center mb-10 text-slate-300/80 text-lg">
-          Enter your dev query. AI answers appear in the dark first.<br />
-          <span className="text-emerald-400">Stay curious. Stay lucrative.</span>
-        </p>
-        {/* Search bar */}
-        <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center mb-12">
-          <input
-            type="text"
-            className="rounded-l-lg px-5 py-3 w-full max-w-md bg-zinc-800/80 border-2 border-fuchsia-700 focus:outline-none text-white placeholder:text-zinc-400 font-mono placeholder:text-sm shadow-lg focus:ring-2 focus:ring-emerald-400/50"
-            style={{ letterSpacing: "0.03em" }}
-            placeholder="e.g. How does React suspense work?"
-            value={query}
-            autoFocus
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button
-            className="rounded-r-lg px-5 py-3 text-black bg-gradient-to-r from-fuchsia-400 via-pink-400 to-emerald-300 font-bold focus:from-cyan-300 focus:via-blue-300 focus:to-fuchsia-400"
-            type="submit"
-          >
-            Search
-          </button>
-        </form>
-        {/* Results */}
-        {submitted && (
-          <>
-            <section className="mb-8 animate-in fade-in slide-in-from-top-6 duration-700">
-              <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-fuchsia-950/70 border border-zinc-800/60 rounded-xl p-6 shadow-lg">
-                <div className="mb-1 text-lg font-mono text-emerald-400 flex gap-2 items-center">
-                  <span className="relative">
-                    <span className="animate-pulse text-fuchsia-400 pr-2">🪄</span>
-                  </span>
-                  {AI_RESULT.title}
-                </div>
-                <div className="text-slate-200/90 font-mono text-md pl-7">
-                  {AI_RESULT.body}
-                  <br />
-                  <span className="opacity-60 italic">(Your query: {query})</span>
-                </div>
-              </div>
-            </section>
-            <section className="grid gap-5">
-              {FEATURED_RESULTS.map((res) => (
-                <a
-                  href={res.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  key={res.url}
-                  className={`group bg-gradient-to-r ${res.gradient} rounded-xl p-5 border-2 shadow-md transition-all hover:scale-[1.02] hover:shadow-fuchsia-700/40 cursor-pointer flex items-center gap-6`}
-                >
-                  <span className="text-2xl font-black font-mono tracking-widest px-3 py-2 bg-black/60 border rounded-md border-fuchsia-500 text-fuchsia-300 shadow-md group-hover:bg-fuchsia-800/60 transition">
-                    {res.badge}
-                  </span>
-                  <span className="flex-1">
-                    <span className="block font-mono text-lg text-white mb-1">
-                      {res.title}
-                    </span>
-                    <span className="block text-slate-200/80 text-sm font-mono">
-                      {res.excerpt}
-                    </span>
-                  </span>
-                  <span className="ml-auto opacity-50 group-hover:opacity-100 text-lg">→</span>
-                </a>
-              ))}
-            </section>
-          </>
-        )}
-        {/* Mysterious lucrative coin/banner */}
-        <div className="fixed right-4 top-6 md:right-12 md:top-8 z-50 animate-bounce">
-          <span className="px-5 py-2 bg-gradient-to-r from-fuchsia-600/90 via-emerald-400/80 to-black font-semibold rounded-xl shadow-2xl border-2 border-fuchsia-800 text-zinc-50 font-mono text-lg select-none cursor-pointer">
-            💎 Unlock Pro Mode
-          </span>
+    <div className="min-h-screen w-full bg-[#0a0a0f] text-slate-100 flex flex-col relative overflow-x-hidden">
+      {/* Background radial effects */}
+      <div
+        className="fixed inset-0 pointer-events-none -z-10"
+        style={{
+          background:
+            'radial-gradient(ellipse at 80% 15%, #2e026d33 0%, #0d0e15 65%, #08080c 100%)',
+        }}
+      />
+      <div
+        className="fixed inset-0 pointer-events-none -z-10 opacity-25"
+        style={{
+          backgroundImage:
+            'radial-gradient(rgba(79, 249, 243, 0.12) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }}
+      />
+
+      {/* Top Navbar */}
+      <Navbar onOpenPro={() => setIsProOpen(true)} />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-10 sm:py-14">
+        {/* Hero Section */}
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-mono mb-4">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Multi-Source Developer Search & AI Oracle</span>
+          </div>
+
+          <h1 className="font-mono text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-300 to-emerald-300 tracking-tight pb-3">
+            DEVETRA
+          </h1>
+
+          <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto font-mono">
+            Synthesizing solutions from <span className="text-pink-400">Stack Overflow</span>,{' '}
+            <span className="text-emerald-400">GitHub</span>,{' '}
+            <span className="text-indigo-400">Dev.to</span>, and{' '}
+            <span className="text-amber-400">Hacker News</span>.
+          </p>
         </div>
-      </div>
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        {/* Futuristic animated cyber matrix: bg visuals */}
-        <div className="absolute w-full h-full animate-pulse opacity-10 blur-md"
-          style={{
-            background:
-              "repeating-linear-gradient(120deg, #e521fa22, #14ffea18 50px, #05001705 100px)",
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar
+            query={query}
+            setQuery={setQuery}
+            onSearch={executeSearch}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Recent Searches */}
+        <RecentSearches
+          searches={recentSearches}
+          onSelect={(q) => {
+            setQuery(q);
+            executeSearch(q);
           }}
+          onClear={handleClearSearches}
         />
-        <div className="hidden md:block absolute bottom-0 left-0 w-full h-64 opacity-60 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 60% 100%, #4ff9f388 0%, #18181b 80%)",
-          }}
-        />
-      </div>
+
+        {/* Loading State */}
+        {isLoading && <SkeletonLoader />}
+
+        {/* Search Results & AI Section */}
+        {!isLoading && hasSearched && (
+          <div className="animate-in fade-in duration-500">
+            {/* AI Developer Oracle Answer */}
+            {aiAnswer && <AiAnswerCard answer={aiAnswer} query={submittedQuery} />}
+
+            {/* Filter Bar */}
+            <FilterBar
+              activeSource={activeSource}
+              onChange={setActiveSource}
+              counts={counts}
+            />
+
+            {/* Results Feed */}
+            {filteredResults.length > 0 ? (
+              <div className="space-y-4">
+                {filteredResults.map((result) => (
+                  <ResultCard key={result.id} result={result} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center border border-zinc-800 rounded-2xl bg-zinc-900/40">
+                <AlertCircle className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                <p className="font-mono text-sm text-zinc-400">
+                  No results found for this source. Try selecting "All Sources" or rephrasing your query.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Initial Empty State / Feature Grid */}
+        {!hasSearched && (
+          <div className="mt-12 grid sm:grid-cols-3 gap-4 font-mono text-xs">
+            <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
+              <span className="text-emerald-400 font-bold block mb-1">⚡ Live Aggregation</span>
+              <span className="text-zinc-400">
+                Simultaneously queries GitHub, Dev.to, Hacker News, & Stack Exchange APIs in parallel.
+              </span>
+            </div>
+            <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
+              <span className="text-fuchsia-400 font-bold block mb-1">🪄 AI Developer Oracle</span>
+              <span className="text-zinc-400">
+                Synthesizes concepts, best practices, and code blocks ready to copy-paste.
+              </span>
+            </div>
+            <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
+              <span className="text-cyan-400 font-bold block mb-1">🔒 Client-Side & Fast</span>
+              <span className="text-zinc-400">
+                Zero telemetry, instant keyboard navigation, and custom Gemini API key support.
+              </span>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-zinc-800/80 py-6 text-center text-xs font-mono text-zinc-500">
+        <p>
+          Devetra Search Engine • Built with React, TypeScript & Tailwind CSS • Maintained by{' '}
+          <a
+            href="https://github.com/Roxen-AS"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-400 hover:text-emerald-400 transition underline underline-offset-4"
+          >
+            Roxen-AS
+          </a>
+        </p>
+      </footer>
+
+      {/* Pro Modal */}
+      <ProModal isOpen={isProOpen} onClose={() => setIsProOpen(false)} />
     </div>
   );
 }
-
-export default App;
